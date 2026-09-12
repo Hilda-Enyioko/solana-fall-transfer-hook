@@ -16,6 +16,7 @@ pub struct Initialize<'info> {
         bump,
         space = ANCHOR_DISCRIMINATOR_SIZE + RateLimit::INIT_SPACE,
     )]
+    pub mint: InterfaceAccount<'info, Mint>,
     pub rate_limit: Account<'info, RateLimit>,
     pub system_program: Program<'info, System>,
 }
@@ -23,10 +24,16 @@ pub struct Initialize<'info> {
 pub fn handler(ctx: Context<Initialize>) -> Result<()> {
     // For the challenge - Ensure the mint is a token-2022 mint by checking its owner (Pass the mint in the context and check its owner. 
     // Consider saving the mint in the RateLimit struct if needed for future use.
+    require_keys_eq!(
+        *ctx.accounts.mint.to_account_info().owner,
+        token_2022::ID,
+        ErrorCode::InvalidMint
+    );
 
     // Initialize the rate limit account with the authority, mint, max amount, and window start timestamp
     ctx.accounts.rate_limit.set_inner(RateLimit {
         authority: ctx.accounts.payer.key(),
+        mint: ctx.accounts.mint.key(),
         max_amount: RateLimit::MAX_AMOUNT,
         window_start: Clock::get()?.unix_timestamp,
         amount_transferred: 0
